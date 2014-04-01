@@ -4,6 +4,7 @@ class Table
 
   width: 0
   height: 0
+  $trs: []
 
   cells: {}
 
@@ -24,17 +25,29 @@ class Table
         if message.binding?
           @setBinding message.cell[0], message.cell[1], message.binding
 #      , 0, message
+#    @redraw()
+
+  redraw: ->
+    table = ""
+    for row from 0 til @height
+      table += "<tr>"
+      for col from 0 til @width
+        table += "<td>" + @cell(row, col).value + "</td>"
+      table += "</tr>"
+    @$table.html(table)
+
 
   ensureSize: !(minHeight, minWidth) ->
-    for row from 0 til @height
-      $row = @$table.find("tr").eq(row)
-      width = @width
-      while width < minWidth
-        c = new Cell(row, width, @socket)
-        @setCell(row, width, c)
-        $row.append(c.$elem())
-        width++
-    @width = Math.max @width, minWidth
+    if(@width < minWidth)
+      for row from 0 til @height
+        $row = @$trs[row]
+        width = @width
+        while width < minWidth
+          c = new Cell(row, width, @socket)
+          @setCell(row, width, c)
+          $row.append(c.$elem())
+          width++
+      @width = Math.max @width, minWidth
     while @height < minHeight
       $tr = $("<tr></tr>")
       for col from 0 til @width
@@ -42,6 +55,7 @@ class Table
         @setCell(@height, col, c)
         $tr.append c.$elem()
       @$table.append($tr)
+      @$trs.push($tr)
       @height++
 
   cell: (row, col) ->
@@ -93,7 +107,7 @@ class Cell
     @update()
 
   update: !->
-    if @binding.substr(0, 1) == '='
+    if @binding?.substr(0, 1) == '='
       @$value.html @value
     else
       @$value.html @binding
@@ -103,7 +117,6 @@ class Cell
 
   setValue: !(value) ->
     @value = value
-    @$value.html value
     @update()
 
 

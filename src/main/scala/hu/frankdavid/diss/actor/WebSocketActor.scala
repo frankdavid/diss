@@ -2,26 +2,34 @@ package hu.frankdavid.diss.actor
 
 import akka.actor.{ActorRef, ActorLogging, Props, Actor}
 import io.netty.channel.Channel
-import hu.frankdavid.diss.expression.{Const, HasValue, Value, Cell}
+import hu.frankdavid.diss.expression._
 import hu.frankdavid.diss.actor.WebSocketActor._
 import hu.frankdavid.diss.Program
 import scala.util.parsing.json.{JSONArray, JSONObject, JSON}
-import hu.frankdavid.diss.actor.TableHandlerActor.{GetAllCells, Bind}
 import java.lang.NumberFormatException
 import akka.pattern._
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
 import hu.frankdavid.diss.actor.WebSocketActor.ReceiveCellBindingChanged
-import hu.frankdavid.diss.expression.Value
 import scala.util.parsing.json.JSONArray
-import hu.frankdavid.diss.expression.Cell
-import hu.frankdavid.diss.actor.WebSocketActor.NotifyCellValueChanged
+import hu.frankdavid.diss.actor.WebSocketActor.CellValueChanged
 import scala.util.parsing.json.JSONObject
 import hu.frankdavid.diss.actor.WebSocketActor.NotifyCellBindingChanged
-import scala.Some
-import hu.frankdavid.diss.actor.TableHandlerActor.Bind
+import scala.{collection, Some}
 import scala.concurrent.duration._
+import hu.frankdavid.diss.actor.CalculatorManagerActor.{Bind, GetAllCells}
+import scala.collection.parallel.mutable
+import scala.collection.parallel
+import scala.util.parsing.json.JSONArray
+import scala.util.parsing.json.JSONObject
+import scala.Some
+import hu.frankdavid.diss.actor.WebSocketActor.ReceiveCellBindingChanged
+import hu.frankdavid.diss.expression.Value
+import hu.frankdavid.diss.expression.Cell
+import hu.frankdavid.diss.actor.WebSocketActor.CellValueChanged
+import hu.frankdavid.diss.actor.WebSocketActor.NotifyCellBindingChanged
+import hu.frankdavid.diss.actor.CalculatorManagerActor.Bind
 
 
 class WebSocketActor extends Actor with ActorLogging {
@@ -31,23 +39,36 @@ class WebSocketActor extends Actor with ActorLogging {
   implicit val timeout = Timeout(3, TimeUnit.SECONDS)
 
   val messages = ListBuffer[String]()
-  var tableActor: Option[ActorRef] = _
+  var calculatorActor: Option[ActorRef] = _
+
+  val bindingChanges = new collection.mutable.HashMap[Cell, HasValue]
+  val valueChanges = new collection.mutable.HashMap[Cell, Value]
 
   system.scheduler.schedule(0 milliseconds, 100 milliseconds, self, Flush)
 
   def receive = {
-    case SetTable =>
-      tableActor = Some(sender)
+    case SetCalculator =>
+      calculatorActor = Some(sender)
     case Flush =>
-      if(messages.length > 0) {
-        Program.webServer.webSocketConnections.writeText(messages.mkString("[", ",", "]"))
-        messages.clear()
+      if(valueChanges.size > 0 || bindingChanges.size > 0) {
+        val valueStringParts = valueChanges.map {
+          case (cell, value) => "{\"cell\": [" + cell.row + ", " + cell.col + "], \"value\": \"" + value.value + "\"}"
+        }
+        val bindingStringParts = bindingChanges.map {
+          case (cell, expression) => "{\"cell\": [" + cell.row + ", " + cell.col + "], \"binding\": \"" + expressionToString(expression) + "\"}"
+        }
+        Program.webServer.webSocketConnections.writeText((bindingStringParts ++ valueStringParts).mkString("[", ",", "]"))
+        valueChanges.clear()
+        bindingChanges.clear()
       }
-
-    case NotifyCellValueChanged(cell, value) =>
-      messages += "{\"cell\": [" + cell.row + ", " + cell.col + "], \"value\": \"" + value.value + "\"}"
+    case CellValueChanged(cell, value) =>
+      valueChanges(cell) = value
+//      Program.webServer.webSocketConnections.writeText((bindingStringParts ++ valueStringParts).mkString("[", ",", "]"))
+//      Program.webServer.webSocketConnections.writeText("[{\"cell\": [" + cell.row + ", " + cell.col + "], \"value\": \"" + value.value + "\"}]")
     case NotifyCellBindingChanged(cell, expression) =>
-      messages += "{\"cell\": [" + cell.row + ", " + cell.col + "], \"binding\": \"" + expressionToString(expression) + "\"}"
+      bindingChanges(cell) = expression
+//      messages += "{\"cell\": [" + cell.row + ", " + cell.col + "], \"binding\": \"" + expressionToString(expression) + "\"}"
+//      Program.webServer.webSocketConnections.writeText("[{\"cell\": [" + cell.row + ", " + cell.col + "], \"binding\": \"" + expressionToString(expression) + "\"}]")
     case ReceiveCellBindingChanged(bindingString) =>
       JSON.parseRaw(bindingString) match {
         case Some(o) =>
@@ -57,19 +78,19 @@ class WebSocketActor extends Actor with ActorLogging {
           val expressionString = json("binding").asInstanceOf[String]
           val parse = parseExpression(expressionString)
           parse match {
-            case Some(expr) =>  tableActor.map(_ ! Bind(cell, expr))
+            case Some(expr) => calculatorActor.map(_ ! Bind(cell, expr))
             case _ =>
           }
       }
     case PushAllCells =>
-      val maybeAllCells = tableActor.map(_ ? GetAllCells)
+      val maybeAllCells = calculatorActor.map(_ ? GetAllCells)
       maybeAllCells match {
         case Some(allCells) => allCells.mapTo[List[(Cell, (HasValue, Option[Value]))]].onSuccess {
           case list => list.foreach {
             case (cell, (expression, maybeValue)) =>
               self ! NotifyCellBindingChanged(cell, expression)
               maybeValue match {
-                case Some(value) => self ! NotifyCellValueChanged(cell, value)
+                case Some(value) => self ! CellValueChanged(cell, value)
                 case _ =>
               }
           }
@@ -100,8 +121,6 @@ object WebSocketActor {
 
   case class WebSocketRegistered(channel: Channel)
 
-  case class NotifyCellValueChanged(cell: Cell, value: Value)
-  
   case class NotifyCellBindingChanged(cell: Cell, expression: HasValue)
 
   case class ReceiveCellBindingChanged(bindingString: String)
@@ -110,5 +129,5 @@ object WebSocketActor {
 
   case object Flush
 
-  case object SetTable
+  case object SetCalculator
 }

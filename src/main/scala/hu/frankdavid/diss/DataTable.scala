@@ -1,18 +1,22 @@
 package hu.frankdavid.diss
 
-import scala.collection.{SetLike, mutable}
-import hu.frankdavid.diss.DataTable.{UpdateResult, CacheItem}
+import scala.collection.mutable
+import hu.frankdavid.diss.DataTable.UpdateResult
 import hu.frankdavid.diss.expression._
 import hu.frankdavid.diss.expression.Const
-import hu.frankdavid.diss.DataTable.CacheItem
 import hu.frankdavid.diss.expression.Cell
 import hu.frankdavid.diss.DataTable.UpdateResult
 import scala.Some
 
 class DataTable {
+
   private val valueCache = new mutable.HashMap[Expression, Value]
-  private val listeners = new mutable.HashMap[HasValue, mutable.Set[HasValue]] with mutable.MultiMap[HasValue, HasValue]
+  val listeners = new mutable.HashMap[HasValue, mutable.Set[HasValue]] with mutable.MultiMap[HasValue, HasValue]
   val bindings = new mutable.HashMap[Cell, HasValue]
+
+  def invalidate(expression: Expression) {
+      valueCache -= expression
+  }
 
   def get(expression: HasValue): Option[Value] = {
     expression match {
@@ -24,6 +28,14 @@ class DataTable {
       case expr: Expression =>
         subscribeToListeners(expr)
         valueCache.get(expr)
+      case _ => None
+    }
+  }
+
+  def resolveExpression(expression: HasValue): Option[Expression] = {
+    expression match {
+      case e: Expression => Some(e)
+      case c: Cell => bindings.get(c).map(resolveExpression).flatten
       case _ => None
     }
   }
@@ -109,10 +121,6 @@ class DataTable {
   }
 
   private def unsubscribeFromListeners(expression: HasDependencies) {
-//    expression.dependencies foreach {
-//      case parameter: Const =>
-//      case parameter => listeners.removeBinding(parameter, expression)
-//    }
     listeners map {
       case (a, set) if set.contains(expression) => listeners.removeBinding(a, expression) // TODO: maybe add a reverse mapping
     }
@@ -122,24 +130,10 @@ class DataTable {
 
 object DataTable {
 
-  case class UpdateResult(notifiedExpressions: Set[HasValue] = Set.empty) {
-  }
+  case class UpdateResult(notifiedExpressions: Set[HasValue] = Set.empty)
 
   private case class CacheItem(value: Any, listeners: Set[Expression])
 
-//  private case class CellBinding(cell: Cell, value: Expression) extends Expression {
-//    def evaluate(params: Seq[Any]) = params(0)
-//
-//    override def dependencies = Seq(value)
-//
-//    override def equals(obj: Any) =
-//      obj match {
-//        case CellBinding(cell2, _) => cell == cell2
-//        case _ => false
-//      }
-//
-//    override def hashCode() = cell.hashCode()
-//  }
 
 }
 

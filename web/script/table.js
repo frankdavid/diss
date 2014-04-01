@@ -10,6 +10,7 @@
     }
     prototype.width = 0;
     prototype.height = 0;
+    prototype.$trs = [];
     prototype.cells = {};
     prototype.initialize = function(rows, cols){
       var this$ = this;
@@ -34,20 +35,36 @@
         }
       }
     };
-    prototype.ensureSize = function(minHeight, minWidth){
-      var i$, to$, row, $row, width, c, $tr, col;
+    prototype.redraw = function(){
+      var table, i$, to$, row, j$, to1$, col;
+      table = "";
       for (i$ = 0, to$ = this.height; i$ < to$; ++i$) {
         row = i$;
-        $row = this.$table.find("tr").eq(row);
-        width = this.width;
-        while (width < minWidth) {
-          c = new Cell(row, width, this.socket);
-          this.setCell(row, width, c);
-          $row.append(c.$elem());
-          width++;
+        table += "<tr>";
+        for (j$ = 0, to1$ = this.width; j$ < to1$; ++j$) {
+          col = j$;
+          table += "<td>" + this.cell(row, col).value + "</td>";
         }
+        table += "</tr>";
       }
-      this.width = Math.max(this.width, minWidth);
+      return this.$table.html(table);
+    };
+    prototype.ensureSize = function(minHeight, minWidth){
+      var i$, to$, row, $row, width, c, $tr, col;
+      if (this.width < minWidth) {
+        for (i$ = 0, to$ = this.height; i$ < to$; ++i$) {
+          row = i$;
+          $row = this.$trs[row];
+          width = this.width;
+          while (width < minWidth) {
+            c = new Cell(row, width, this.socket);
+            this.setCell(row, width, c);
+            $row.append(c.$elem());
+            width++;
+          }
+        }
+        this.width = Math.max(this.width, minWidth);
+      }
       while (this.height < minHeight) {
         $tr = $("<tr></tr>");
         for (i$ = 0, to$ = this.width; i$ < to$; ++i$) {
@@ -57,6 +74,7 @@
           $tr.append(c.$elem());
         }
         this.$table.append($tr);
+        this.$trs.push($tr);
         this.height++;
       }
     };
@@ -120,7 +138,8 @@
       this.update();
     };
     prototype.update = function(){
-      if (this.binding.substr(0, 1) === '=') {
+      var ref$;
+      if (((ref$ = this.binding) != null ? ref$.substr(0, 1) : void 8) === '=') {
         this.$value.html(this.value);
       } else {
         this.$value.html(this.binding);
@@ -129,7 +148,6 @@
     };
     prototype.setValue = function(value){
       this.value = value;
-      this.$value.html(value);
       this.update();
     };
     return Cell;
