@@ -16,7 +16,7 @@ object Program extends App {
   val webServer = DissServer.create(system, socket)
 
   webServer.start()
-  val Size = 50
+  val Size = 20
 
   for(i <- 0 to Size) {
     calculator ! Bind(Cell(i, 0), Const(1))
@@ -26,7 +26,6 @@ object Program extends App {
   for(row <- 1 to Size; col <- 1 to Size) {
     calculator ! Bind(Cell(row, col), Sum(Seq(Cell(row, col - 1), Cell(row - 1, col))))
   }
-
 
   calculator ! Bind(Cell(0, 1), Const(5))
 

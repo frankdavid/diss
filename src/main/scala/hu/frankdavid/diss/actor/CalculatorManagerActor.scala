@@ -1,32 +1,25 @@
 package hu.frankdavid.diss.actor
 
 import akka.actor._
-import scala.concurrent.duration._
 import hu.frankdavid.diss.expression._
 import hu.frankdavid.diss.actor.CalculatorManagerActor._
-import hu.frankdavid.diss.actor.CalculatorManagerActor.ScheduleCalculate
-import scala.collection.mutable.ListBuffer
 import scala.collection.mutable
 import hu.frankdavid.diss.util.LinkedHashSet
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import hu.frankdavid.diss.DataTable
-import hu.frankdavid.diss.DataTable.UpdateResult
-import hu.frankdavid.diss.actor.WebSocketActor.{CellValueChanged, SetCalculator, NotifyCellBindingChanged}
-import hu.frankdavid.diss.actor.CalculatorWorkerActor.Calculate
+import hu.frankdavid.diss.actor.WebSocketActor.SetCalculator
 import akka.dispatch.{PriorityGenerator, UnboundedPriorityMailbox}
 import hu.frankdavid.diss.DataTable.UpdateResult
 import hu.frankdavid.diss.actor.CalculatorManagerActor.Get
-import scala.Some
 import hu.frankdavid.diss.actor.CalculatorManagerActor.ReceiveCalculationResult
 import hu.frankdavid.diss.actor.CalculatorManagerActor.ScheduleCalculate
 import hu.frankdavid.diss.expression.Cell
 import hu.frankdavid.diss.expression.Value
-import hu.frankdavid.diss.actor.WebSocketActor.CellValueChanged
 import hu.frankdavid.diss.actor.WebSocketActor.NotifyCellBindingChanged
-import hu.frankdavid.diss.actor.CalculatorWorkerActor.Calculate
 import hu.frankdavid.diss.actor.CalculatorManagerActor.Bind
 import com.typesafe.config.Config
+import hu.frankdavid.diss.event.CellValueChanged
 
 
 class CalculatorManagerActor(socketActor: ActorRef) extends Actor with ActorLogging {
@@ -81,42 +74,47 @@ class CalculatorManagerActor(socketActor: ActorRef) extends Actor with ActorLogg
       processUpdateResult(result)
     case IssueJobs =>
       sortJobsTopologically()
+      var x = false
       jobs.foreach {
         job =>
+          x = true
 //          c += 1
 //          log.info(c.toString)
           jobs.remove(job)
-          val params = job.dependencies.map(d => (d, valueCache.get(d)))
-          val nulls = params.filter(_._2.isEmpty)
-          if (nulls.length > 0) {
-            log.info("miss")
+//          val params = job.dependencies.map(d => (d, valueCache.get(d)))
+          val params = job.dependencies.map(valueCache.get(_).get)
+//          val nulls = params.filter(_._2.isEmpty)
+//          if (nulls.length > 0) {
+//            log.info("miss")
 //            nulls.map(n => valueCache.resolveExpression(n._1)).foreach {
 //              case Some(e: Expression) =>
 //                self ! ScheduleCalculate(e)
 //              case _ =>
 //            }
-          }
-          else {
-            val result = job.evaluate(params.map(_._2.get))
+//          }
+//          else {
+//            val result = job.evaluate(params.map(_._2.get))
+            val result = job.evaluate(params)
             val update = valueCache.put(job, result)
             processUpdateResult(update)
           }
+          if(x)
+            println("VÉGEEE")
 //            worker ! Calculate(job, params.map(_._2.get))
-      }
+//      }
       self ! IssueJobs
   }
 
   def processUpdateResult(updateResult: UpdateResult) {
     updateResult.notifiedExpressions.foreach {
       case c: Cell => valueCache.get(c).foreach {
-            system.eventStream.publish(CellValueChanged)
-        value => socketActor ! CellValueChanged(c, value)
+        value =>
+          socketActor ! CellValueChanged(c, value)
+//          system.eventStream.publish(CellValueChanged(c, value))
       }
-//        valueCache.resolveExpression(c).map(self ! ScheduleCalculate(_))
       case expr =>
         valueCache.resolveExpression(expr).map(self ! ScheduleCalculate(_))
     }
-
   }
 
   def sortJobsTopologically() {

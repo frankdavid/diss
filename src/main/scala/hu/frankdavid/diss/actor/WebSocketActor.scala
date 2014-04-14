@@ -1,35 +1,28 @@
 package hu.frankdavid.diss.actor
 
-import akka.actor.{ActorRef, ActorLogging, Props, Actor}
+import akka.actor.{ActorRef, ActorLogging, Actor}
 import io.netty.channel.Channel
 import hu.frankdavid.diss.expression._
 import hu.frankdavid.diss.actor.WebSocketActor._
 import hu.frankdavid.diss.Program
-import scala.util.parsing.json.{JSONArray, JSONObject, JSON}
+import scala.util.parsing.json.JSON
 import java.lang.NumberFormatException
 import akka.pattern._
 import akka.util.Timeout
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ListBuffer
-import hu.frankdavid.diss.actor.WebSocketActor.ReceiveCellBindingChanged
-import scala.util.parsing.json.JSONArray
-import hu.frankdavid.diss.actor.WebSocketActor.CellValueChanged
-import scala.util.parsing.json.JSONObject
-import hu.frankdavid.diss.actor.WebSocketActor.NotifyCellBindingChanged
-import scala.{collection, Some}
+import scala.collection
 import scala.concurrent.duration._
-import hu.frankdavid.diss.actor.CalculatorManagerActor.{Bind, GetAllCells}
-import scala.collection.parallel.mutable
-import scala.collection.parallel
+import hu.frankdavid.diss.actor.CalculatorManagerActor.GetAllCells
 import scala.util.parsing.json.JSONArray
 import scala.util.parsing.json.JSONObject
 import scala.Some
 import hu.frankdavid.diss.actor.WebSocketActor.ReceiveCellBindingChanged
 import hu.frankdavid.diss.expression.Value
 import hu.frankdavid.diss.expression.Cell
-import hu.frankdavid.diss.actor.WebSocketActor.CellValueChanged
 import hu.frankdavid.diss.actor.WebSocketActor.NotifyCellBindingChanged
 import hu.frankdavid.diss.actor.CalculatorManagerActor.Bind
+import hu.frankdavid.diss.event.CellValueChanged
 
 
 class WebSocketActor extends Actor with ActorLogging {
@@ -45,6 +38,7 @@ class WebSocketActor extends Actor with ActorLogging {
   val valueChanges = new collection.mutable.HashMap[Cell, Value]
 
   system.scheduler.schedule(0 milliseconds, 100 milliseconds, self, Flush)
+  system.eventStream.subscribe(self, classOf[CellValueChanged])
 
   def receive = {
     case SetCalculator =>
