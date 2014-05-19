@@ -1,0 +1,23 @@
+<component name="ArtifactManager">
+  <artifact name="diss:jar">
+    <output-path>$USER_HOME$/Public/diss/artifacts</output-path>
+    <root id="root">
+      <element id="archive" name="diss.jar">
+        <element id="module-output" name="diss" />
+      </element>
+      <element id="library" level="project" name="SBT: io.netty:netty-all:4.0.14.Final" />
+      <element id="library" level="project" name="SBT: org.mashupbots.socko:socko-webserver_2.10:0.4.2" />
+      <element id="library" level="project" name="SBT: org.slf4j:slf4j-nop:1.6.0-RC0" />
+      <element id="library" level="project" name="SBT: com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.3.2" />
+      <element id="library" level="project" name="SBT: org.scala-lang:scala-reflect:2.10.2" />
+      <element id="library" level="project" name="SBT: org.eclipse.jetty.npn:npn-api:1.1.0.v20120525" />
+      <element id="library" level="project" name="SBT: com.typesafe:config:1.2.0" />
+      <element id="library" level="project" name="SBT: org.scala-lang:scala-library:2.10.3" />
+      <element id="library" level="project" name="SBT: com.typesafe.akka:akka-slf4j_2.10:2.2.3" />
+      <element id="library" level="project" name="SBT: ch.qos.logback:logback-core:1.0.9" />
+      <element id="library" level="project" name="SBT: org.slf4j:slf4j-api:1.7.2" />
+      <element id="library" level="project" name="SBT: ch.qos.logback:logback-classic:1.0.9" />
+      <element id="library" level="project" name="SBT: com.typesafe.akka:akka-actor_2.10:2.3.1" />
+    </root>
+  </artifact>
+</component>
