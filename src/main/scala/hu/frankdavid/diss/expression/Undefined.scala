@@ -1,7 +1,9 @@
 package hu.frankdavid.diss.expression
 
+import hu.frankdavid.diss.DataTable
+
 object Undefined extends Expression {
-  def evaluate(params: Seq[Value]): Value = throw new Exception("Cannot evaluate Undefined")
-  def cost = 0
-  def mapReduce(maxCost: Int) = MapReduce(Seq(), Undefined)
+  def evaluate(implicit table: DataTable): Any = null
+  def mapReduce(maxCost: Int) = None
+  def cost(implicit table: DataTable) = 0
 }

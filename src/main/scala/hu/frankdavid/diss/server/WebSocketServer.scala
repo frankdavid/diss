@@ -5,12 +5,12 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import hu.frankdavid.diss.ChatHandler
 import org.mashupbots.socko.events.HttpResponseStatus
 import org.mashupbots.socko.webserver.{WebServerConfig, WebServer}
-import hu.frankdavid.diss.actor.WebSocketActor
+import hu.frankdavid.diss.actor.{WebSocketHandler, WebSocketActor}
 import hu.frankdavid.diss.actor.WebSocketActor.{PushAllCells, ReceiveCellBindingChanged}
 import scala.concurrent.duration._
 
-object DissServer extends {
-  def create(actorSystem: ActorSystem, socketActor: ActorRef) = {
+object WebSocketServer extends {
+  def create(actorSystem: ActorSystem, socket: WebSocketHandler) = {
     import actorSystem.dispatcher
     val routes = Routes({
 
@@ -31,17 +31,19 @@ object DissServer extends {
           case Path("/websocket/") => {
             wsHandshake.authorize()
             actorSystem.scheduler.scheduleOnce(50 milliseconds) {
-              socketActor ! PushAllCells
+              socket.pushAllCells()
             }
           }
         }
 
       case WebSocketFrame(wsFrame) => {
-        socketActor ! ReceiveCellBindingChanged(wsFrame.readText())
+        socket.receiveCellBindingChanged(wsFrame.readText())
       }
 
     })
 
-    new WebServer(WebServerConfig(), routes, actorSystem)
+    val server = new WebServer(WebServerConfig(), routes, actorSystem)
+    socket.server = server
+    server
   }
 }

@@ -21,9 +21,9 @@ class Table
     for message in messages
 #      window.setTimeout (message)~>
         if message.value?
-          @setValue message.cell[0], message.cell[1], message.value
+          @setValue message.cell[0], message.cell[1], nl2br(message.value)
         if message.binding?
-          @setBinding message.cell[0], message.cell[1], message.binding
+          @setBinding message.cell[0], message.cell[1], nl2br(message.binding)
 #      , 0, message
 #    @redraw()
 
@@ -120,6 +120,9 @@ class Cell
     @update()
 
 
+function nl2br(str, is_xhtml)
+    breakTag = if is_xhtml || typeof is_xhtml == 'undefined' then  '<br />' else '<br>'
+    return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1' + breakTag + '$2')
 
 
 

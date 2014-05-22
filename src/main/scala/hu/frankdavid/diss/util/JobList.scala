@@ -1,9 +1,10 @@
 package hu.frankdavid.diss.util
 
 import scala.collection.{Iterator, mutable}
+import hu.frankdavid.diss.expression.Expression
 
-class LinkedHashSet[A] extends mutable.LinkedHashSet[A] {
-  def reverseIterator: Iterator[A] = new Iterator[A] {
+class JobList extends mutable.LinkedHashSet[Expression] {
+  def reverseIterator: Iterator[Expression] = new Iterator[Expression] {
     private var cur = lastEntry
     def hasNext = cur ne null
     def next =

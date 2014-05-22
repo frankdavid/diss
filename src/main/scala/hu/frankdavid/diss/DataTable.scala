@@ -10,7 +10,7 @@ import scala.Some
 
 class DataTable {
 
-  private val valueCache = new mutable.HashMap[Expression, Value]
+  private val valueCache = new mutable.HashMap[Expression, Any]
   val listeners = new mutable.HashMap[HasValue, mutable.Set[HasValue]] with mutable.MultiMap[HasValue, HasValue]
   val bindings = new mutable.HashMap[Cell, HasValue]
 
@@ -18,10 +18,10 @@ class DataTable {
       valueCache -= expression
   }
 
-  def get(expression: HasValue): Option[Value] = {
+  def get(expression: HasValue): Option[Any] = {
     expression match {
       case Undefined => None
-      case Const(x) => Some(x)
+      case Const(x) => Option(x)
       case null => None
       case cell: Cell =>
         bindings.get(cell).map(get).flatten
@@ -95,8 +95,8 @@ class DataTable {
     Set() ++ notified
   }
 
-  def put(expression: Expression, value: Value): UpdateResult = {
-    require(value != null, "Null values cannot be cached")
+  def put(expression: Expression, value: Any): UpdateResult = {
+//    require(value != null, "Null values cannot be cached")
     valueCache.get(expression) match {
       case Some(oldValue) =>
         if (oldValue != value) {
@@ -114,7 +114,7 @@ class DataTable {
   }
 
   private def subscribeToListeners(expression: HasDependencies) {
-    expression.dependencies foreach {
+    expression.parameters foreach {
       case parameter: Const =>
       case parameter => listeners.addBinding(parameter, expression)
     }
@@ -130,7 +130,9 @@ class DataTable {
 
 object DataTable {
 
-  case class UpdateResult(notifiedExpressions: Set[HasValue] = Set.empty)
+  case class UpdateResult(notifiedExpressions: Set[HasValue] = Set.empty) {
+    def +(other: UpdateResult) = UpdateResult(notifiedExpressions ++ other.notifiedExpressions)
+  }
 
   private case class CacheItem(value: Any, listeners: Set[Expression])
 

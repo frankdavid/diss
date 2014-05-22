@@ -23,6 +23,6 @@ libraryDependencies += "org.mashupbots.socko" %% "socko-webserver" % "0.4.2"
 
 //libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.6.0-RC0"
 
-mainClass in Compile := Some("hu.frankdavid.diss.network.NetworkHandlerTest")
+mainClass in Compile := Some("hu.frankdavid.diss.Program")
 
 unmanagedBase <<= baseDirectory { base => base / "lib" }

@@ -28,10 +28,10 @@
       for (i$ = 0, len$ = messages.length; i$ < len$; ++i$) {
         message = messages[i$];
         if (message.value != null) {
-          this.setValue(message.cell[0], message.cell[1], message.value);
+          this.setValue(message.cell[0], message.cell[1], nl2br(message.value));
         }
         if (message.binding != null) {
-          this.setBinding(message.cell[0], message.cell[1], message.binding);
+          this.setBinding(message.cell[0], message.cell[1], nl2br(message.binding));
         }
       }
     };
@@ -152,6 +152,11 @@
     };
     return Cell;
   }());
+  function nl2br(str, is_xhtml){
+    var breakTag;
+    breakTag = is_xhtml || typeof is_xhtml === 'undefined' ? '<br />' : '<br>';
+    return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1' + breakTag + '$2');
+  }
   $(document).ready(function(){
     var table;
     table = new Table($('#table-container'));
